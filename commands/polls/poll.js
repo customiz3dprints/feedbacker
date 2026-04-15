@@ -1,4 +1,5 @@
-const {SlashCommandBuilder, EmbedBuilder, ButtonBuilder, ButtonStyle, ActionRowBuilder, MessageFlags, ThreadAutoArchiveDuration, ChannelType} = require("discord.js");  
+const {SlashCommandBuilder, EmbedBuilder, ButtonBuilder, ButtonStyle, ActionRowBuilder, MessageFlags, ThreadAutoArchiveDuration, ChannelType, ComponentType} = require("discord.js");  
+const QuickChart = require('quickchart-js');
 module.exports = {
     data: new SlashCommandBuilder()
         .setName("poll")
@@ -15,16 +16,8 @@ module.exports = {
             await interaction.reply({
                 content: "You've set an invalid number of options",
                 flags: MessageFlags.Ephemeral
-            })
-        }
-        //Embed
-        const pollEmbed = new EmbedBuilder()
-            .setColor(0xff0000)
-            .setTitle(interaction.options.getString("title"))
-            .setURL('https://discord.js.org/')
-            .setAuthor({ name: interaction.user.displayName, iconURL: interaction.user.avatarURL().toString()});
-        for (let i = 0; i<interaction.options.getNumber("options"); i++ ){
-            pollEmbed.addFields({name: `Option ${i+1}`, value: interaction.options.getString(`option_${i+1}`)}) ;
+            });
+            return;
         }
         //Buttons
         const optionNumber = interaction.options.getNumber("options");
@@ -38,19 +31,65 @@ module.exports = {
         for (let i = 1; i<optionNumber;i++){
             buttons.addComponents(buttonArray[i-1]);
         }
-        await interaction.channel.send({embeds: [pollEmbed],components: [buttons]});
+        //Chart
+        const OptionBars = [];
+        const barLabels = [];
+        for (let i = 0; i<optionNumber;i++){
+            OptionBars.push({label : `Option ${i+1}`, data : [0]});
+            barLabels.push(interaction.options.getString(`option_${i+1}`));
+            if (interaction.options.getString(`option_${i+1}`) == null){
+                await interaction.reply({
+                    content: "Set values for each option you have",
+                    flags: MessageFlags.Ephemeral
+                });
+                return;
+            }
+        }
+        const myChart = new QuickChart();
+        myChart
+            .setConfig({
+                type: 'bar',
+                data: {
+                labels: barLabels,
+                datasets: OptionBars,
+                },
+            })
+            .setWidth(800)
+            .setHeight(400)
+            .setBackgroundColor('transparent');
+        const pollImage = String(myChart.getUrl());
+        //Embed
+        const pollEmbed = new EmbedBuilder()
+            .setColor(0xff0000)
+            .setTitle(interaction.options.getString("title"))
+            .setAuthor({ name: interaction.user.displayName, iconURL: interaction.user.avatarURL().toString()})
+            .setImage(pollImage);
+
+        for (let i = 0; i<interaction.options.getNumber("options"); i++ ){
+            pollEmbed.addFields({name: `Option ${i+1}`, value: interaction.options.getString(`option_${i+1}`)}) ;
+        }
+
+        const pollMessage = await interaction.reply({embeds: [pollEmbed], components: [buttons], withResponse : true});
         
+        
+
         //Thread creation
         await interaction.guild.members.fetch();
         const thread = await interaction.channel.threads.create({ name: interaction.options.getString("title"),
              reason: `A new poll has been created by ${interaction.user.displayName}`, 
              autoArchiveDuration: ThreadAutoArchiveDuration.ThreeDays, type: ChannelType.PrivateThread
             }); 
+        await thread.members.add(interaction.user);
         const role = interaction.guild.roles.cache.find(role => role.name == "teszt");
         role.members.forEach(async (m) => {
+            if (m === interaction.user) return;
             await thread.members.add(m);
         });
+        const relayEmbed = new EmbedBuilder()
+            .setTitle(`${interaction.channel.lastMessage.embeds[0].title}'s feedback channel`)
+            .setDescription(`Here, you'll receive information about the poll, like who voted, on what, etc. This poll was made by ${interaction.user.displayName}`);
+        await thread.send({embeds: [relayEmbed]});
 
-        console.log(`created ${thread.name}`)
+        
     }
 }
