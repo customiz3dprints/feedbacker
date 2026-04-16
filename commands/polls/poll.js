@@ -1,5 +1,6 @@
 const {SlashCommandBuilder, EmbedBuilder, ButtonBuilder, ButtonStyle, ActionRowBuilder, MessageFlags, ThreadAutoArchiveDuration, ChannelType, ComponentType} = require("discord.js");  
 const QuickChart = require('quickchart-js');
+const MySQL = require("mysql");
 module.exports = {
     data: new SlashCommandBuilder()
         .setName("poll")
@@ -12,9 +13,32 @@ module.exports = {
         .addStringOption((option) => option.setName("option_4").setDescription("Name for option 4 (if set options to less then the number of this option, the command will ignore it"))
         .addStringOption((option) => option.setName("option_5").setDescription("Name for option 5 (if set options to less then the number of this option, the command will ignore it")),
     async execute(interaction) {
+        function idGen(){
+            var result = "";
+            const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+            for(let i = 0; i<6;i++){
+                result += chars.charAt(Math.random() * chars.length);
+            }
+            return result;
+        }
+        var con = MySQL.createConnection({
+            host: "localhost",
+            port:3333,
+            user: process.env.DB_UNAME,
+            password: process.env.DB_PASS,
+            database: "teszt"
+        });
         if(interaction.options.getNumber("options") > 5 || interaction.options.getNumber("options") < 1){
             await interaction.reply({
                 content: "You've set an invalid number of options",
+                flags: MessageFlags.Ephemeral
+            });
+            return;
+        }
+
+        if(interaction.channel.threads.cache.find((cThread) => cThread.name == interaction.options.getString("title"))){
+            await interaction.reply({
+                content: "You've already made a poll like this",
                 flags: MessageFlags.Ephemeral
             });
             return;
@@ -68,9 +92,19 @@ module.exports = {
         for (let i = 0; i<interaction.options.getNumber("options"); i++ ){
             pollEmbed.addFields({name: `Option ${i+1}`, value: interaction.options.getString(`option_${i+1}`)}) ;
         }
+        const pollID = idGen();
+        con.connect((error) =>{
+            if (error) throw error;
+            console.log("connected");
+            con.query(`CREATE TABLE ${pollID} (voterID VARCHAR(255))`, (errors, response) =>{
+                if(errors) throw errors;
+                console.log("made it");
+            })
+        });
+
+        pollEmbed.setFooter({text : pollID});
 
         const pollMessage = await interaction.reply({embeds: [pollEmbed], components: [buttons], withResponse : true});
-        
         
 
         //Thread creation

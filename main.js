@@ -3,7 +3,6 @@ const {Client, Collection, GatewayIntentBits, MessageFlags, Events, ChannelType,
 const fs = require("node:fs");
 const path = require("node:path");
 const token = process.env.TOKEN;
-
 const client = new Client({intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers, GatewayIntentBits.GuildMessages]});
 
 client.once("clientReady", (ready) =>{
