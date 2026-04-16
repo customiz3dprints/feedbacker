@@ -26,7 +26,7 @@ module.exports = {
             port:3333,
             user: process.env.DB_UNAME,
             password: process.env.DB_PASS,
-            database: "teszt"
+            database: String(interaction.guild.id)
         });
         if(interaction.options.getNumber("options") > 5 || interaction.options.getNumber("options") < 1){
             await interaction.reply({
@@ -96,7 +96,7 @@ module.exports = {
         con.connect((error) =>{
             if (error) throw error;
             console.log("connected");
-            con.query(`CREATE TABLE ${pollID} (voterID VARCHAR(255))`, (errors, response) =>{
+            con.query(`CREATE TABLE ${pollID} (voterID BIGINT)`, (errors, response) =>{
                 if(errors) throw errors;
                 console.log("made it");
             })
