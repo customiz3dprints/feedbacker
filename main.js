@@ -63,9 +63,9 @@ client.on(Events.InteractionCreate, async (interaction) => {
     else if(interaction.isButton()){
         //Feedback handling
         try{
-                pool.query("USE ??", [interaction.guild.id], (useError, useResult) => {
-                    pool.query("SHOW TABLES LIKE ?", [interaction.message.embeds[0].footer.text.toLowerCase()], (showError, showResult) =>{
-                        if (!showError.length){
+                    pool.query("SHOW TABLES FROM ?? LIKE ?", [interaction.guild.id, interaction.message.embeds[0].footer.text.toLowerCase()], (showError, showResult) =>{
+                        console.log(showError);
+                        if (!showResult.length){
                                 interaction.reply({content: "There was an error when picking an option. Please contact a staff to resolve it.   ", flags: MessageFlags.Ephemeral});
                                 return;
                             };
@@ -103,7 +103,6 @@ client.on(Events.InteractionCreate, async (interaction) => {
                         }
                     });
                     });
-                });
                 
         } catch(err){
             await interaction.reply({content: "something went wrong", components : [], flags: MessageFlags.Ephemeral});

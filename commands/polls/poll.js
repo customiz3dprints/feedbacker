@@ -13,6 +13,23 @@ module.exports = {
         .addStringOption((option) => option.setName("option_4").setDescription("Name for option 4 (if set options to less then the number of this option, the command will ignore it"))
         .addStringOption((option) => option.setName("option_5").setDescription("Name for option 5 (if set options to less then the number of this option, the command will ignore it")),
     async execute(interaction) {
+        function checkMax(){
+            var checkcon = MySQL.createConnection({
+                host: "localhost",
+                port:3333,
+                user: process.env.DB_UNAME,
+                password: process.env.DB_PASS,
+                database: String(interaction.guild.id)
+            });
+            checkcon.connect((checkError) =>{
+                if (checkError) throw checkError;
+                checkcon.query("SELECT * FROM ?? . ??", [interaction.guild.id, "polls"], (selectError, selectResult) => {
+                    if (selectError) throw selectError;
+                    console.log(selectResult.length);
+                });
+            });
+        }
+        checkMax();
         function idGen(){
             var result = "";
             const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
@@ -98,8 +115,19 @@ module.exports = {
             console.log("connected");
             con.query(`CREATE TABLE ${pollID} (voterID BIGINT)`, (errors, response) =>{
                 if(errors) throw errors;
-                console.log("made it");
-            })
+                con.query("INSERT INTO polls (id, choices ,opt1 ,opt2 ,opt3 ,opt4 ,opt5 ,chose1 ,chose2 ,chose3 ,chose4 ,chose5 ) VALUES (? ,? ,? ,? ,? , ?, ?, 0, 0, 0, 0, 0)", [
+                    pollID,
+                    optionNumber,
+                    interaction.options.getString("option_1"),
+                    interaction.options.getString("option_2"),
+                    interaction.options.getString("option_3"),
+                    interaction.options.getString("option_4"),
+                    interaction.options.getString("option_5"),
+                ], (insertError, insertResult) => {
+                    if (insertError) throw insertError;
+                    con.end();
+                });
+            });
         });
 
         pollEmbed.setFooter({text : pollID});
@@ -108,7 +136,8 @@ module.exports = {
         
 
         //Thread creation
-        await interaction.guild.members.fetch();
+        try{await interaction.guild.members.fetch();}
+        catch(err) {console.log(err);}
         const thread = await interaction.channel.threads.create({ name: interaction.options.getString("title"),
              reason: `A new poll has been created by ${interaction.user.displayName}`, 
              autoArchiveDuration: ThreadAutoArchiveDuration.ThreeDays, type: ChannelType.PrivateThread

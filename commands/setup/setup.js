@@ -51,9 +51,10 @@ module.exports = {
                                     });
                                     con.end();
                                 })
-                    
                     },
                 );
+                con.query("CREATE TABLE ?? (id VARCHAR(6), choices INT, opt1 VARCHAR(255), opt2 VARCHAR(255), opt3 VARCHAR(255), opt4 VARCHAR(255), opt5 VARCHAR(255), chose1 INT, chose2 INT, chose3 INT, chose4 INT, chose5 INT)", ["polls"], (pollError, pollResult) =>{if (pollError) throw pollError;});
+                con.query("CREATE TABLE ?? (id VARCHAR(6), choices INT, opt1 VARCHAR(255), opt2 VARCHAR(255), opt3 VARCHAR(255), opt4 VARCHAR(255), opt5 VARCHAR(255))", ["surveys"], (surveyError, surveyResult) =>{if (surveyError) throw surveyError;});
             })
         },
       );
