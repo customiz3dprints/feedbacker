@@ -13,26 +13,30 @@ module.exports = {
         .addStringOption((option) => option.setName("option_4").setDescription("Name for option 4 (if set options to less then the number of this option, the command will ignore it"))
         .addStringOption((option) => option.setName("option_5").setDescription("Name for option 5 (if set options to less then the number of this option, the command will ignore it")),
     async execute(interaction) {
+        var isApproved;
         function checkRole(){
-            const userRoles = interaction.member.roles;
-            var roleCheckCon = MySQL.createConnection({
-                host: "localhost",
-                port:3333,
-                user: process.env.DB_UNAME,
-                password: process.env.DB_PASS,
-                database: String(interaction.guild.id)
-            });
-            roleCheckCon.connect((connectError)=>{
-                roleCheckCon.query("SELECT approved_role FROM ?? . ??", [interaction.guild.id, "guild_settings"], (roleError, roleResult) =>{
-                    const isApproved = interaction.guild.roles.cache.find(role => role.name == roleResult[0].approved_role);
-                    if(!isApproved){
-                        return false;
-                    }
+            return new Promise((resolve, reject) => {
+                    var roleCheckCon = MySQL.createConnection({
+                    host: "localhost",
+                    port:3333,
+                    user: process.env.DB_UNAME,
+                    password: process.env.DB_PASS,
+                    database: String(interaction.guild.id)
                 });
-            });
+                
+                roleCheckCon.connect((connectError)=>{
+                    roleCheckCon.query("SELECT approved_role FROM ?? . ??", [interaction.guild.id, "guild_settings"], async (roleError, roleResult) =>{
+                        if (roleError) throw roleError;
+                        isApproved = interaction.member.roles.cache.has(String(roleResult[0].approved_role));
+                        resolve(isApproved);
+                        roleCheckCon.end();
+                    });
+                });
+            })
+            
             
         }
-        if(!checkRole()){
+        if(await checkRole() == false){
             await interaction.reply({
                 content: "You don't have permission to do that.",
                 flags: MessageFlags.Ephemeral
@@ -51,6 +55,7 @@ module.exports = {
                 if (checkError) throw checkError;
                 checkcon.query("SELECT * FROM ?? . ??", [interaction.guild.id, "polls"], (selectError, selectResult) => {
                     if (selectError) throw selectError;
+                    checkcon.end();
                 });
             });
         }
