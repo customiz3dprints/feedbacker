@@ -25,14 +25,13 @@ module.exports = {
                 if (checkError) throw checkError;
                 checkcon.query("SELECT * FROM ?? . ??", [interaction.guild.id, "polls"], (selectError, selectResult) => {
                     if (selectError) throw selectError;
-                    console.log(selectResult.length);
                 });
             });
         }
         checkMax();
         function idGen(){
             var result = "";
-            const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+            const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
             for(let i = 0; i<6;i++){
                 result += chars.charAt(Math.random() * chars.length);
             }
@@ -76,7 +75,7 @@ module.exports = {
         const OptionBars = [];
         const barLabels = [];
         for (let i = 0; i<optionNumber;i++){
-            OptionBars.push({label : `Option ${i+1}`, data : [0]});
+            OptionBars.push(0);
             barLabels.push(interaction.options.getString(`option_${i+1}`));
             if (interaction.options.getString(`option_${i+1}`) == null){
                 await interaction.reply({
@@ -92,8 +91,20 @@ module.exports = {
                 type: 'bar',
                 data: {
                 labels: barLabels,
-                datasets: OptionBars,
+                datasets: [{
+                    label: "votes",
+                    data: OptionBars
+                }]
                 },
+                options:{
+                    scales:{
+                        x:{
+                            grid:{
+                                display: true
+                            }
+                        }
+                    }
+                }
             })
             .setWidth(800)
             .setHeight(400)
@@ -112,7 +123,6 @@ module.exports = {
         const pollID = idGen();
         con.connect((error) =>{
             if (error) throw error;
-            console.log("connected");
             con.query(`CREATE TABLE ${pollID} (voterID BIGINT)`, (errors, response) =>{
                 if(errors) throw errors;
                 con.query("INSERT INTO polls (id, choices ,opt1 ,opt2 ,opt3 ,opt4 ,opt5 ,chose1 ,chose2 ,chose3 ,chose4 ,chose5 ) VALUES (? ,? ,? ,? ,? , ?, ?, 0, 0, 0, 0, 0)", [
