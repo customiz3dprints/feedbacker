@@ -13,6 +13,32 @@ module.exports = {
         .addStringOption((option) => option.setName("option_4").setDescription("Name for option 4 (if set options to less then the number of this option, the command will ignore it"))
         .addStringOption((option) => option.setName("option_5").setDescription("Name for option 5 (if set options to less then the number of this option, the command will ignore it")),
     async execute(interaction) {
+        function checkRole(){
+            const userRoles = interaction.member.roles;
+            var roleCheckCon = MySQL.createConnection({
+                host: "localhost",
+                port:3333,
+                user: process.env.DB_UNAME,
+                password: process.env.DB_PASS,
+                database: String(interaction.guild.id)
+            });
+            roleCheckCon.connect((connectError)=>{
+                roleCheckCon.query("SELECT approved_role FROM ?? . ??", [interaction.guild.id, "guild_settings"], (roleError, roleResult) =>{
+                    const isApproved = interaction.guild.roles.cache.find(role => role.name == roleResult[0].approved_role);
+                    if(!isApproved){
+                        return false;
+                    }
+                });
+            });
+            
+        }
+        if(!checkRole()){
+            await interaction.reply({
+                content: "You don't have permission to do that.",
+                flags: MessageFlags.Ephemeral
+            });
+            return;
+        }
         function checkMax(){
             var checkcon = MySQL.createConnection({
                 host: "localhost",
