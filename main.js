@@ -1,5 +1,5 @@
 require("dotenv").config();
-const {Client, Collection, GatewayIntentBits, MessageFlags, Events, ChannelType, ThreadAutoArchiveDuration, EmbedBuilder} = require("discord.js");
+const {Client, Collection, GatewayIntentBits, MessageFlags, Events, ChannelType, ThreadAutoArchiveDuration, EmbedBuilder, SlashCommandAssertions} = require("discord.js");
 const fs = require("node:fs");
 const path = require("node:path");
 const token = process.env.TOKEN;
@@ -110,9 +110,9 @@ client.on(Events.InteractionCreate, async (interaction) => {
         //Feedback handling
         try{
                     pool.query("SHOW TABLES FROM ?? LIKE ?", [interaction.guild.id, interaction.message.embeds[0].footer.text.toLowerCase()], (showError, showResult) =>{
-                        console.log(showError);
+                        console.log(showResult);
                         if (!showResult.length){
-                                interaction.reply({content: "There was an error when picking an option. Please contact a staff to resolve it.   ", flags: MessageFlags.Ephemeral});
+                                interaction.reply({content: "There was an error when picking an option. Please check the expiration date on the poll, it might have expired. Please contact a staff to resolve it if not.   ", flags: MessageFlags.Ephemeral});
                                 return;
                             };
                     pool.query(`SELECT * FROM ??.?? WHERE voterID = "${interaction.user.id}";`,[interaction.guild.id, interaction.message.embeds[0].footer.text.toLowerCase()], (newError, result, fields) => {
@@ -182,3 +182,28 @@ client.on(Events.InteractionCreate, async (interaction) => {
 });
 
 client.login(token);
+
+setInterval(() => {
+    pool.query("SHOW DATABASES", (showError, showResult) => {
+        if (showError) throw showError;
+        showResult.forEach(db => {
+            if (db.Database == 'information_schema' || db.Database == 'sakila' || db.Database == 'world' || db.Database == 'sys' || db.Database == 'mysql' || db.Database == 'performance_schema') return;
+            pool.query("USE ??", [db.Database], (useError, useResult) =>{
+                if(useError) throw useError;
+                pool.query("SELECT id, expiresIn FROM ?? . ??", [db.Database, "polls"], (selectError, selectResult) => {
+                    if (selectError) throw selectError;
+                    selectResult.forEach(poll => {
+                        if (poll.expiresIn-1 < 1){
+                            pool.query("DROP TABLE ??", [poll.id]);
+                            pool.query("DELETE FROM ?? . ?? WHERE id = ?", [db.Database, "polls", poll.id]);
+                            
+                        }
+                        else{
+                            pool.query("UPDATE ?? . ?? SET expiresIn = ? WHERE id = ?", [db.Database, "polls", poll.expiresIn-1, poll.id]);
+                        }
+                    });
+                });
+            });
+        });
+    });
+}, 1040);

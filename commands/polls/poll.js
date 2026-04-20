@@ -121,7 +121,6 @@ module.exports = {
             });
             return;
         }
-
         if(interaction.channel.threads.cache.find((cThread) => cThread.name == interaction.options.getString("title"))){
             await interaction.reply({
                 content: "You've already made a poll like this",
@@ -181,10 +180,12 @@ module.exports = {
             .setBackgroundColor('transparent');
         const pollImage = String(myChart.getUrl());
         //Embed
+        const expirationDate = Math.floor(Date.now() / 1000) + (86400 * 3);
         const pollEmbed = new EmbedBuilder()
             .setColor(0xff0000)
             .setTitle(interaction.options.getString("title"))
             .setAuthor({ name: interaction.user.displayName, iconURL: interaction.user.avatarURL().toString()})
+            .setDescription(`This poll expires <t:${expirationDate}:R>`)
             .setImage(pollImage);
 
         for (let i = 0; i<interaction.options.getNumber("options"); i++ ){
@@ -195,7 +196,7 @@ module.exports = {
             if (error) throw error;
             con.query(`CREATE TABLE ${pollID} (voterID BIGINT)`, (errors, response) =>{
                 if(errors) throw errors;
-                con.query("INSERT INTO polls (id, choices ,opt1 ,opt2 ,opt3 ,opt4 ,opt5 ,chose1 ,chose2 ,chose3 ,chose4 ,chose5 ) VALUES (? ,? ,? ,? ,? , ?, ?, 0, 0, 0, 0, 0)", [
+                con.query("INSERT INTO polls (id, choices ,opt1 ,opt2 ,opt3 ,opt4 ,opt5 ,chose1 ,chose2 ,chose3 ,chose4 ,chose5, expiresIn ) VALUES (? ,? ,? ,? ,? , ?, ?, 0, 0, 0, 0, 0, 3)", [
                     pollID,
                     optionNumber,
                     interaction.options.getString("option_1"),
