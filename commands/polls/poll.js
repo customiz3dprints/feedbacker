@@ -44,22 +44,37 @@ module.exports = {
             return;
         }
         function checkMax(){
-            var checkcon = MySQL.createConnection({
-                host: "localhost",
-                port:3333,
-                user: process.env.DB_UNAME,
-                password: process.env.DB_PASS,
-                database: String(interaction.guild.id)
-            });
-            checkcon.connect((checkError) =>{
+            
+            var isMax = false;
+            return new Promise((resolve, reject) => {
+                var checkcon = MySQL.createConnection({
+                    host: "localhost",
+                    port:3333,
+                    user: process.env.DB_UNAME,
+                    password: process.env.DB_PASS,
+                    database: String(interaction.guild.id)
+                });
+                checkcon.connect((checkError) =>{
                 if (checkError) throw checkError;
-                checkcon.query("SELECT * FROM ?? . ??", [interaction.guild.id, "polls"], (selectError, selectResult) => {
-                    if (selectError) throw selectError;
-                    checkcon.end();
+                    checkcon.query("SELECT * FROM ?? . ??", [interaction.guild.id, "polls"], (selectError, selectResult) => {
+                        if (selectError) throw selectError;
+                        if(selectResult.length > 2){
+                            isMax = true;
+                            resolve(isMax);
+                        }
+                        checkcon.end();
+                    });
                 });
             });
+            
         }
-        checkMax();
+        if (await checkMax()){
+            await interaction.reply({
+                content: "You have too many polls already.",
+                flags: MessageFlags.Ephemeral
+            });
+            return;
+        }
         function idGen(){
             var result = "";
             const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
