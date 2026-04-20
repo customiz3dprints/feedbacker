@@ -11,14 +11,14 @@ module.exports = {
     .addRoleOption((option) =>
       option
         .setName("approved_role")
-        .setDescription("What role should be allowed to make poll/surveys?"),
+        .setDescription("What role should be allowed to make poll/surveys?")
+        .setRequired(true),
     )
     .addChannelOption((option) =>
       option
         .setName("approved_channel")
-        .setDescription(
-          "What channel should polls/sruvey be allowed to be posted in?",
-        ),
+        .setDescription("What channel should polls/sruvey be allowed to be posted in?",)
+        .setRequired(true),
     ),
   async execute(interaction) {
     var con = MySQL.createConnection({

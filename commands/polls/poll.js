@@ -13,17 +13,41 @@ module.exports = {
         .addStringOption((option) => option.setName("option_4").setDescription("Name for option 4 (if set options to less then the number of this option, the command will ignore it"))
         .addStringOption((option) => option.setName("option_5").setDescription("Name for option 5 (if set options to less then the number of this option, the command will ignore it")),
     async execute(interaction) {
-        var isApproved;
+        function checkDB(){
+            return new Promise((resolve, reject) => {
+                var checkDBCon = MySQL.createConnection({
+                    host: "localhost",
+                    port:3333,
+                    user: process.env.DB_UNAME,
+                    password: process.env.DB_PASS,
+                }); 
+                checkDBCon.connect((connectError)=>{
+                    checkDBCon.query("SHOW databases LIKE ?", [interaction.guild.id], async (DBError, DBResult) =>{
+                        if (DBError) throw DBError;
+                        console.log(DBResult.length ? true : false)
+                        resolve(DBResult.length ? true : false);
+                        checkDBCon.end();
+                    });
+                });
+            });
+        }
+        if(await checkDB() == false){
+            await interaction.reply({
+                content: "You have to register the server first.",
+                flags: MessageFlags.Ephemeral
+            });
+            return;
+        }
         function checkRole(){
             return new Promise((resolve, reject) => {
-                    var roleCheckCon = MySQL.createConnection({
+                var roleCheckCon = MySQL.createConnection({
                     host: "localhost",
                     port:3333,
                     user: process.env.DB_UNAME,
                     password: process.env.DB_PASS,
                     database: String(interaction.guild.id)
                 });
-                
+                var isApproved;
                 roleCheckCon.connect((connectError)=>{
                     roleCheckCon.query("SELECT approved_role FROM ?? . ??", [interaction.guild.id, "guild_settings"], async (roleError, roleResult) =>{
                         if (roleError) throw roleError;
@@ -44,8 +68,6 @@ module.exports = {
             return;
         }
         function checkMax(){
-            
-            var isMax = false;
             return new Promise((resolve, reject) => {
                 var checkcon = MySQL.createConnection({
                     host: "localhost",
@@ -59,8 +81,10 @@ module.exports = {
                     checkcon.query("SELECT * FROM ?? . ??", [interaction.guild.id, "polls"], (selectError, selectResult) => {
                         if (selectError) throw selectError;
                         if(selectResult.length > 2){
-                            isMax = true;
-                            resolve(isMax);
+                            resolve(true);
+                        }
+                        else{
+                            resolve(false);
                         }
                         checkcon.end();
                     });
@@ -68,7 +92,7 @@ module.exports = {
             });
             
         }
-        if (await checkMax()){
+        if (await checkMax() == true){
             await interaction.reply({
                 content: "You have too many polls already.",
                 flags: MessageFlags.Ephemeral
