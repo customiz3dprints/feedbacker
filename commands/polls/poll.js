@@ -1,6 +1,8 @@
 const {SlashCommandBuilder, EmbedBuilder, ButtonBuilder, ButtonStyle, ActionRowBuilder, MessageFlags, ThreadAutoArchiveDuration, ChannelType, ComponentType} = require("discord.js");  
 const QuickChart = require('quickchart-js');
 const MySQL = require("mysql");
+const fs = require("node:fs");
+const usedIDs = require('./ids.json');
 module.exports = {
     data: new SlashCommandBuilder()
         .setName("poll")
@@ -105,6 +107,7 @@ module.exports = {
             for(let i = 0; i<6;i++){
                 result += chars.charAt(Math.random() * chars.length);
             }
+            result += "_p";
             return result;
         }
         var con = MySQL.createConnection({
@@ -191,7 +194,13 @@ module.exports = {
         for (let i = 0; i<interaction.options.getNumber("options"); i++ ){
             pollEmbed.addFields({name: `Option ${i+1}`, value: interaction.options.getString(`option_${i+1}`)}) ;
         }
-        const pollID = idGen();
+        var pollID = idGen();
+        var usedIDsVar = usedIDs;
+        while (pollID in usedIDs){
+            pollID = idGen();
+        }
+        usedIDsVar.usedID.push(pollID)
+        fs.writeFileSync('./commands/polls/ids.json', JSON.stringify(usedIDs, null, 2));
         con.connect((error) =>{
             if (error) throw error;
             con.query(`CREATE TABLE ${pollID} (voterID BIGINT)`, (errors, response) =>{
@@ -210,6 +219,7 @@ module.exports = {
                 });
             });
         });
+
 
         pollEmbed.setFooter({text : pollID});
 
