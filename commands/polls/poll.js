@@ -196,11 +196,12 @@ module.exports = {
         }
         var pollID = idGen();
         var usedIDsVar = usedIDs;
-        while (pollID in usedIDs){
+        while (pollID in usedIDs.usedIDs){
             pollID = idGen();
         }
-        usedIDsVar.usedID.push(pollID)
-        fs.writeFileSync('./commands/polls/ids.json', JSON.stringify(usedIDs, null, 2));
+        usedIDsVar.usedIDs.push(pollID);
+        console.log(JSON.stringify(usedIDsVar));
+        fs.writeFileSync('./commands/polls/ids.json', JSON.stringify(usedIDsVar));
         con.connect((error) =>{
             if (error) throw error;
             con.query(`CREATE TABLE ${pollID} (voterID BIGINT)`, (errors, response) =>{

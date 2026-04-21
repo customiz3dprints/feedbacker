@@ -5,6 +5,7 @@ const path = require("node:path");
 const token = process.env.TOKEN;
 const client = new Client({intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers, GatewayIntentBits.GuildMessages]});
 const MySQL = require("mysql");
+const usedID_p = require("./commands/polls/ids.json");
 const QuickChart = require('quickchart-js');
             var pool = MySQL.createPool({
                 host: "localhost",
@@ -196,7 +197,9 @@ setInterval(() => {
                         if (poll.expiresIn-1 < 1){
                             pool.query("DROP TABLE ??", [poll.id]);
                             pool.query("DELETE FROM ?? . ?? WHERE id = ?", [db.Database, "polls", poll.id]);
-                            
+                            var usedIDsVar = usedID_p;
+                            usedIDsVar.usedIDs.splice(usedIDsVar.usedIDs.indexOf(poll.id), 1);
+                            fs.writeFileSync('./commands/polls/ids.json', JSON.stringify(usedIDsVar, null, 2));
                         }
                         else{
                             pool.query("UPDATE ?? . ?? SET expiresIn = ? WHERE id = ?", [db.Database, "polls", poll.expiresIn-1, poll.id]);
@@ -206,4 +209,4 @@ setInterval(() => {
             });
         });
     });
-}, 1040);
+}, 86400);
