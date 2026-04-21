@@ -1,11 +1,12 @@
 require("dotenv").config();
-const {Client, Collection, GatewayIntentBits, MessageFlags, Events, ChannelType, ThreadAutoArchiveDuration, EmbedBuilder, SlashCommandAssertions} = require("discord.js");
+const {Client, Collection, GatewayIntentBits, MessageFlags, Events, ChannelType, ThreadAutoArchiveDuration, EmbedBuilder, SlashCommandAssertions, ModalBuilder, TextInputBuilder, TextInputStyle, LabelBuilder} = require("discord.js");
 const fs = require("node:fs");
 const path = require("node:path");
 const token = process.env.TOKEN;
 const client = new Client({intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers, GatewayIntentBits.GuildMessages]});
 const MySQL = require("mysql");
 const usedID_p = require("./commands/polls/ids.json");
+const usedID_s = require("./commands/surveys/ids.json");
 const QuickChart = require('quickchart-js');
             var pool = MySQL.createPool({
                 host: "localhost",
@@ -105,18 +106,63 @@ client.on(Events.InteractionCreate, async (interaction) => {
                     const newEmbed = EmbedBuilder.from(embedData).setImage(pollDisplay);
                     interaction.message.edit({embeds: [newEmbed]});
                     const replyThread = interaction.channel.threads.cache.find((cThread) => cThread.name == interaction.message.embeds[0].title);
-                    replyThread.send({content: `${interaction.member.displayName} (${interaction.member.user.username}) voted on Option number ${optNum}. Current state: ${optionData}`})
+                    replyThread.send({content: `${interaction.member.displayName} (${interaction.member.user.username}) voted on Option number ${optNum}. Current state: ${optionData}`});
                 });
         }
         //Feedback handling
         try{
+                    if(interaction.component.customId === "submit"){
+                        pool.query("SHOW TABLES FROM ?? LIKE ?", [interaction.guild.id, interaction.message.embeds[0].footer.text.toLowerCase()], (showError, showResult) =>{
+                            if (!showResult.length){
+                                    interaction.reply({content: "There was an error when picking an option. Please check the expiration date on the survey, it might have expired. Please contact a staff to resolve it if not.   ", flags: MessageFlags.Ephemeral});
+                                    return;
+                            }
+                        });
+                        function checkBacked(){
+                            return new Promise((resolve, reject) =>{
+                                pool.query("SELECT * FROM ?? . ?? WHERE backerID = ?", [interaction.guild.id, interaction.message.embeds[0].footer.text.toLowerCase(), interaction.user.id], (selectError, selectResult) =>{
+                                    if(selectError) throw selectError;
+                                    if(selectResult.length){
+                                        interaction.reply({content: "You have already sent your feedback. Please contact staff to resolve it if not.   ", flags: MessageFlags.Ephemeral});
+                                        resolve(true);
+                                        return;
+                                    }
+                                    else{
+                                        resolve(false)
+                                    }
+                                });
+                            });
+                        }
+                        if(await checkBacked()){
+                            return;
+                        }
+                         var modal = new ModalBuilder()
+                            .setCustomId(interaction.message.embeds[0].title)
+                            .setTitle(interaction.message.embeds[0].title);
+                        interaction.message.embeds[0].fields.forEach(field => {
+                            let fieldNumber = field.name[6];
+                            const tempInput = new TextInputBuilder ()
+                                .setCustomId(`field_${fieldNumber}`)
+                                .setId(Number(fieldNumber))
+                                .setStyle(TextInputStyle.Short)
+                                .setPlaceholder("Type feedback here");
+                            const tempLabel = new LabelBuilder()
+                                .setLabel(`Question ${fieldNumber}`)
+                                .setDescription(field.value)
+                                .setTextInputComponent(tempInput);
+                            modal.addLabelComponents(tempLabel);
+                            interaction.showModal(modal);
+                            
+                        });
+                        return;
+                    }
                     pool.query("SHOW TABLES FROM ?? LIKE ?", [interaction.guild.id, interaction.message.embeds[0].footer.text.toLowerCase()], (showError, showResult) =>{
                         console.log(showResult);
                         if (!showResult.length){
                                 interaction.reply({content: "There was an error when picking an option. Please check the expiration date on the poll, it might have expired. Please contact a staff to resolve it if not.   ", flags: MessageFlags.Ephemeral});
                                 return;
                             };
-                    pool.query(`SELECT * FROM ??.?? WHERE voterID = "${interaction.user.id}";`,[interaction.guild.id, interaction.message.embeds[0].footer.text.toLowerCase()], (newError, result, fields) => {
+                    pool.query(`SELECT * FROM ??.?? WHERE = "${interaction.user.id}";`,[interaction.guild.id, interaction.message.embeds[0].footer.text.toLowerCase()], (newError, result, fields) => {
                         if (newError) throw newError;
                         if (result.length == 0){
                             if (interaction.component.customId ==="opt1"){
@@ -169,7 +215,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
                             });
                             
                         } else{
-                            interaction.reply({content: "You've already voted'", flags: MessageFlags.Ephemeral});
+                            interaction.reply({content: "You've already voted", flags: MessageFlags.Ephemeral});
                             return;
                         }
                     });
@@ -179,6 +225,19 @@ client.on(Events.InteractionCreate, async (interaction) => {
             await interaction.reply({content: "something went wrong", components : [], flags: MessageFlags.Ephemeral});
             console.log(err);
         }
+    }
+    else if(interaction.isModalSubmit){
+        pool.query(`INSERT INTO ??.?? (backerID) VALUES ("${interaction.user.id}");`,[interaction.guild.id, interaction.message.embeds[0].footer.text.toLowerCase()], (insertError, InsertResult) =>{
+            if (insertError) throw insertError;
+        });
+        const replyThread = interaction.channel.threads.cache.find((cThread) => cThread.name == interaction.message.embeds[0].title);
+        var feedbackEmbed = new EmbedBuilder().setColor(0x00ff00);
+        interaction.fields.fields.forEach(field =>{
+            feedbackEmbed.addFields({name: `Field ${field.customId[6]}`, value: interaction.fields.getTextInputValue(field.customId)});
+        })
+        replyThread.send({embeds: [feedbackEmbed]});
+        interaction.reply({content: "Thanks for your feedback", flags: MessageFlags.Ephemeral});
+        return;
     }
 });
 
@@ -203,6 +262,21 @@ setInterval(() => {
                         }
                         else{
                             pool.query("UPDATE ?? . ?? SET expiresIn = ? WHERE id = ?", [db.Database, "polls", poll.expiresIn-1, poll.id]);
+                        }
+                    });
+                });
+                pool.query("SELECT id, expiresIn FROM ?? . ??", [db.Database, "surveys"], (selectError, selectResult) => {
+                    if (selectError) throw selectError;
+                    selectResult.forEach(poll => {
+                        if (poll.expiresIn-1 < 1){
+                            pool.query("DROP TABLE ??", [poll.id]);
+                            pool.query("DELETE FROM ?? . ?? WHERE id = ?", [db.Database, "survey", poll.id]);
+                            var usedIDsVar = usedID_s;
+                            usedIDsVar.usedIDs.splice(usedIDsVar.usedIDs.indexOf(poll.id), 1);
+                            fs.writeFileSync('./commands/surveys/ids.json', JSON.stringify(usedIDsVar, null, 2));
+                        }
+                        else{
+                            pool.query("UPDATE ?? . ?? SET expiresIn = ? WHERE id = ?", [db.Database, "survey", poll.expiresIn-1, poll.id]);
                         }
                     });
                 });
