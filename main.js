@@ -100,7 +100,6 @@ client.on(Events.InteractionCreate, async (interaction) => {
                         .setWidth(800)
                         .setHeight(400)
                         .setBackgroundColor('transparent');
-                    console.log(optionData);
                     const pollDisplay = newChart.getUrl();
                     const embedData = interaction.message.embeds[0];
                     const newEmbed = EmbedBuilder.from(embedData).setImage(pollDisplay);
@@ -150,14 +149,12 @@ client.on(Events.InteractionCreate, async (interaction) => {
                                 .setLabel(`Question ${fieldNumber}`)
                                 .setDescription(field.value)
                                 .setTextInputComponent(tempInput);
-                            modal.addLabelComponents(tempLabel);
-                            interaction.showModal(modal);
-                            
+                            modal.addLabelComponents(tempLabel); 
                         });
+                        interaction.showModal(modal);
                         return;
                     }
                     pool.query("SHOW TABLES FROM ?? LIKE ?", [interaction.guild.id, interaction.message.embeds[0].footer.text.toLowerCase()], (showError, showResult) =>{
-                        console.log(showResult);
                         if (!showResult.length){
                                 interaction.reply({content: "There was an error when picking an option. Please check the expiration date on the poll, it might have expired. Please contact a staff to resolve it if not.   ", flags: MessageFlags.Ephemeral});
                                 return;
@@ -231,7 +228,9 @@ client.on(Events.InteractionCreate, async (interaction) => {
             if (insertError) throw insertError;
         });
         const replyThread = interaction.channel.threads.cache.find((cThread) => cThread.name == interaction.message.embeds[0].title);
-        var feedbackEmbed = new EmbedBuilder().setColor(0x00ff00);
+        var feedbackEmbed = new EmbedBuilder()
+            .setColor(0x00ff00)
+            .setAuthor({ name: interaction.user.displayName, iconURL: interaction.user.avatarURL().toString()});
         interaction.fields.fields.forEach(field =>{
             feedbackEmbed.addFields({name: `Field ${field.customId[6]}`, value: interaction.fields.getTextInputValue(field.customId)});
         })

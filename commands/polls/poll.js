@@ -26,7 +26,6 @@ module.exports = {
                 checkDBCon.connect((connectError)=>{
                     checkDBCon.query("SHOW databases LIKE ?", [interaction.guild.id], async (DBError, DBResult) =>{
                         if (DBError) throw DBError;
-                        console.log(DBResult.length ? true : false)
                         resolve(DBResult.length ? true : false);
                         checkDBCon.end();
                     });
@@ -58,7 +57,7 @@ module.exports = {
                         roleCheckCon.end();
                     });
                 });
-            })
+            });
             
             
         }
@@ -200,7 +199,6 @@ module.exports = {
             pollID = idGen();
         }
         usedIDsVar.usedIDs.push(pollID);
-        console.log(JSON.stringify(usedIDsVar));
         fs.writeFileSync('./commands/polls/ids.json', JSON.stringify(usedIDsVar));
         con.connect((error) =>{
             if (error) throw error;
@@ -235,11 +233,25 @@ module.exports = {
              autoArchiveDuration: ThreadAutoArchiveDuration.ThreeDays, type: ChannelType.PrivateThread
             }); 
         await thread.members.add(interaction.user);
-        const role = interaction.guild.roles.cache.find(role => role.name == "teszt");
-        role.members.forEach(async (m) => {
-            if (m === interaction.user) return;
-            await thread.members.add(m);
+        var addCheckCon = MySQL.createConnection({
+            host: "localhost",
+            port:3333,
+            user: process.env.DB_UNAME,
+            password: process.env.DB_PASS,
+            database: String(interaction.guild.id)
         });
+        addCheckCon.connect((connectError)=>{
+            addCheckCon.query("SELECT approved_role FROM ?? . ??", [interaction.guild.id, "guild_settings"], async (roleError, roleResult) =>{
+                if (roleError) throw roleError;
+                const role = interaction.guild.roles.cache.find(role => role.id == String(roleResult[0].approved_role));
+                role.members.forEach(async (m) => {
+                    if (m === interaction.user) return;
+                    await thread.members.add(m);
+                });
+                addCheckCon.end();
+            });
+        });
+        
         const relayEmbed = new EmbedBuilder()
             .setTitle(`${interaction.channel.lastMessage.embeds[0].title}'s feedback channel`)
             .setDescription(`Here, you'll receive information about the poll, like who voted, on what, etc. This poll was made by ${interaction.user.displayName}`);

@@ -7,7 +7,7 @@ module.exports = {
     data: new SlashCommandBuilder()
         .setName("survey")
         .setDescription("Create a survey")
-        .addStringOption((option) => option.setName("title").setDescription("Title of poll").setRequired(true))
+        .addStringOption((option) => option.setName("title").setDescription("Title of survey").setRequired(true))
         .addStringOption((option) => option.setName("desc").setDescription("Add a description to the survey").setRequired(true))
         .addStringOption((option) => option.setName("field_1").setDescription("Name for field 1").setRequired(true))
         .addStringOption((option) => option.setName("field_2").setDescription("Name for field 2 (if set options to less then the number of this option, the command will ignore it"))
@@ -26,7 +26,6 @@ module.exports = {
                 checkDBCon.connect((connectError)=>{
                     checkDBCon.query("SHOW databases LIKE ?", [interaction.guild.id], async (DBError, DBResult) =>{
                         if (DBError) throw DBError;
-                        console.log(DBResult.length ? true : false)
                         resolve(DBResult.length ? true : false);
                         checkDBCon.end();
                     });
@@ -69,7 +68,6 @@ module.exports = {
             });
             return;
         }
-        /*
         function checkMax(){
             return new Promise((resolve, reject) => {
                 var checkcon = MySQL.createConnection({
@@ -102,7 +100,6 @@ module.exports = {
             });
             return;
         }
-        */
         if(interaction.channel.threads.cache.find((cThread) => cThread.name == interaction.options.getString("title"))){
             await interaction.reply({
                 content: "You've already made a survey like this",
@@ -120,15 +117,12 @@ module.exports = {
             return result;
         }
         const surveyID = idGen();
-        /*
         var usedIDsVar = usedIDs;
         while (surveyID in usedIDs.usedIDs){
             surveyID = idGen();
         }
         usedIDsVar.usedIDs.push(surveyID);
-        console.log(JSON.stringify(usedIDsVar));
-        fs.writeFileSync('./commands/polls/ids.json', JSON.stringify(usedIDsVar));
-        */
+        fs.writeFileSync('./commands/surveys/ids.json', JSON.stringify(usedIDsVar));
        const expirationDate = Math.floor(Date.now() / 1000) + (86400 * 3);
         var surveyEmbed = new EmbedBuilder()
             .setTitle(interaction.options.getString("title"))
@@ -137,7 +131,6 @@ module.exports = {
             .setFooter({text: surveyID})
             .setColor(0x00bbff);
         for(let i = 0; i<5; i++){
-            console.log(interaction.options.getString(`field_${i+1}`));
             if (interaction.options.getString(`field_${i+1}`)){
                 surveyEmbed.addFields({name: `Field ${i+1}`, value: interaction.options.getString(`field_${i+1}`)});
             }
@@ -172,10 +165,23 @@ module.exports = {
             });
         });
         await thread.members.add(interaction.user);
-        const role = interaction.guild.roles.cache.find(role => role.name == "teszt");
-        role.members.forEach(async (m) => {
-            if (m === interaction.user) return;
-            await thread.members.add(m);
+        var addCheckCon = MySQL.createConnection({
+            host: "localhost",
+            port:3333,
+            user: process.env.DB_UNAME,
+            password: process.env.DB_PASS,
+            database: String(interaction.guild.id)
+        });
+        addCheckCon.connect((connectError)=>{
+            addCheckCon .query("SELECT approved_role FROM ?? . ??", [interaction.guild.id, "guild_settings"], async (roleError, roleResult) =>{
+                if (roleError) throw roleError;
+                const role = interaction.guild.roles.cache.find(role => role.id == String(roleResult[0].approved_role));
+                role.members.forEach(async (m) => {
+                    if (m === interaction.user) return;
+                    await thread.members.add(m);
+                });
+                addCheckCon.end();
+            });
         });
         const relayEmbed = new EmbedBuilder()
             .setTitle(`${interaction.channel.lastMessage.embeds[0].title}'s feedback channel`)
