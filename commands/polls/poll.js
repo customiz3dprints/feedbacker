@@ -68,6 +68,35 @@ module.exports = {
             });
             return;
         }
+        function checkChannel(){
+            return new Promise((resolve, reject) => {
+                var channelCheckCon = MySQL.createConnection({
+                    host: "localhost",
+                    port:3333,
+                    user: process.env.DB_UNAME,
+                    password: process.env.DB_PASS,
+                    database: String(interaction.guild.id)
+                });
+                var isApproved;
+                channelCheckCon.connect((connectError)=>{
+                    channelCheckCon.query("SELECT approved_channel FROM ?? . ??", [interaction.guild.id, "guild_settings"], async (channelError, channelResult) =>{
+                        if (channelError) throw channelError;
+                        isApproved = interaction.channel.id === channelResult[0].approved_channel;
+                        resolve(isApproved);
+                        channelCheckCon.end();
+                    });
+                });
+            });
+            
+            
+        }
+        if(await checkChannel() == false){
+            await interaction.reply({
+                content: "Use the correct channel for the polls/surveys. If you beleive this is the correct channel, please contact ddani6 on discord to resolve the issue.",
+                flags: MessageFlags.Ephemeral
+            });
+            return;
+        }
         function checkMax(){
             return new Promise((resolve, reject) => {
                 var checkcon = MySQL.createConnection({
@@ -100,6 +129,7 @@ module.exports = {
             });
             return;
         }
+
         function idGen(){
             var result = "";
             const chars = "abcdefghijklmnopqrstuvwxyz0123456789";

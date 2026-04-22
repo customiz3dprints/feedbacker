@@ -30,10 +30,10 @@ module.exports = {
     con.connect((error) => {
         if (error) throw error;
         var dbID = interaction.guild.id;
-        con.query( "CREATE DATABASE IF NOT EXISTS ??", [dbID], async (dbError, dbResult) => {
+        con.query( "CREATE DATABASE IF NOT EXISTS ??", [dbID],  (dbError, dbResult) => {
             if (dbError) throw dbError;
-            if (dbResult.warningCount) {
-                await interaction.reply({
+            if (dbResult.warningStatus) {
+            interaction.reply({
                 content: "You've already set up this server. Contact ddani6 on Discord if it is a mistake.",
                 flags: MessageFlags.Ephemeral
             });
@@ -41,8 +41,14 @@ module.exports = {
             }
             con.query("USE ??", [dbID], (useError) => {
                 if (useError) throw useError;
-                con.query("CREATE TABLE ?? (approved_channel VARCHAR(255), approved_role VARCHAR(255))", ["guild_settings"], (tableError, tableResult) => {
+                con.query("CREATE TABLE IF NOT EXISTS ?? (approved_channel VARCHAR(255), approved_role VARCHAR(255))", ["guild_settings"], (tableError, tableResult) => {
                     if (tableError) throw tableError;
+                    if (tableResult.warningStatus) {
+                    interaction.reply({
+                          content: "You've already set up this server. Contact ddani6 on Discord if it is a mistake.",
+                          flags: MessageFlags.Ephemeral
+                      });
+                    };
                     con.query("INSERT INTO ?? (approved_channel, approved_role) VALUES (?, ?)", 
                                 ['guild_settings', interaction.options.getChannel("approved_channel").id, interaction.options.getRole("approved_role").id], async (insertError, insetResult) =>{
                                     await interaction.reply({
@@ -53,8 +59,8 @@ module.exports = {
                                 })
                     },
                 );
-                con.query("CREATE TABLE ?? (id VARCHAR(8), choices INT, opt1 VARCHAR(255), opt2 VARCHAR(255), opt3 VARCHAR(255), opt4 VARCHAR(255), opt5 VARCHAR(255), chose1 INT, chose2 INT, chose3 INT, chose4 INT, chose5 INT, expiresIn TINYINT)", ["polls"], (pollError, pollResult) =>{if (pollError) throw pollError;});
-                con.query("CREATE TABLE ?? (id VARCHAR(8), opt1 VARCHAR(255), opt2 VARCHAR(255), opt3 VARCHAR(255), opt4 VARCHAR(255), opt5 VARCHAR(255), expiresIn TINYINT)", ["surveys"], (surveyError, surveyResult) =>{if (surveyError) throw surveyError;});
+                con.query("CREATE TABLE IF NOT EXISTS ?? (id VARCHAR(8), choices INT, opt1 VARCHAR(255), opt2 VARCHAR(255), opt3 VARCHAR(255), opt4 VARCHAR(255), opt5 VARCHAR(255), chose1 INT, chose2 INT, chose3 INT, chose4 INT, chose5 INT, expiresIn TINYINT)", ["polls"], (pollError, pollResult) =>{if (pollError) throw pollError;});
+                con.query("CREATE TABLE IF NOT EXISTS ?? (id VARCHAR(8), opt1 VARCHAR(255), opt2 VARCHAR(255), opt3 VARCHAR(255), opt4 VARCHAR(255), opt5 VARCHAR(255), expiresIn TINYINT)", ["surveys"], (surveyError, surveyResult) =>{if (surveyError) throw surveyError;});
             })
         },
       );
