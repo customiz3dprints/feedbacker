@@ -26,6 +26,7 @@ module.exports = {
                 content: "Don't set everyone as approved role.",
                 flags: MessageFlags.Ephemeral
             });
+      return;
     }
     var con = MySQL.createConnection({
       host: "localhost",
