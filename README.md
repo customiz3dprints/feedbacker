@@ -14,3 +14,6 @@ A Discord bot to allow people to make polls and surveys for their communities.
 - `/setup <approved_role> <approved_channel>` 
 
 (options marked with "<>" are required, "[]" are optional)
+
+## AI Usage
+- In the making, I used tools like chatGPT and Claude to debug, but not vibe-code it. 
