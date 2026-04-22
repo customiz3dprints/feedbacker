@@ -21,6 +21,12 @@ module.exports = {
         .setRequired(true),
     ),
   async execute(interaction) {
+    if (interaction.guild.roles.everyone === interaction.options.getRole("approved_role")){
+      await interaction.reply({
+                content: "Don't set everyone as approved role.",
+                flags: MessageFlags.Ephemeral
+            });
+    }
     var con = MySQL.createConnection({
       host: "localhost",
       port: 3333,
